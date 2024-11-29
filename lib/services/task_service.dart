@@ -5,10 +5,17 @@ import 'package:sqflite/sqflite.dart';
 class TaskService {
   static final TaskService _instance = TaskService._internal();
   Database? _database;
+  String _currentUserId = 'guest'; // Padrão é "guest"
 
   TaskService._internal();
 
   factory TaskService() => _instance;
+
+  /// Define o ID do usuário atual (para alternar entre bancos de dados)
+  void setUserId(String userId) {
+    _currentUserId = userId;
+    _database = null; // Força a reinicialização do banco de dados
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -16,30 +23,40 @@ class TaskService {
     return _database!;
   }
 
+  /// Inicializa o banco de dados com base no usuário atual
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'tasks.db');
+    final path = join(
+        dbPath, '$_currentUserId-tasks.db'); // Banco específico por usuário
 
     return openDatabase(
       path,
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE tasks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            priority TEXT,
-            isCompleted INTEGER
-          )
-        ''');
+        CREATE TABLE tasks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT,
+          description TEXT,
+          priority TEXT,
+          isCompleted INTEGER,
+          isView INTEGER,
+          userId TEXT
+        )
+      ''');
       },
-      version: 1,
+      version: 6,
     );
   }
 
-  Future<List<Task>> fetchTasks() async {
+  Future<List<Task>> fetchTasks({bool showAll = false}) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('tasks');
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tasks',
+      where: showAll ? null : 'isView = ?',
+      whereArgs: showAll ? null : [1],
+    );
+
     return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
   }
 
@@ -50,11 +67,56 @@ class TaskService {
 
   Future<void> updateTask(Task task) async {
     final db = await database;
-    await db.update('tasks', task.toMap(), where: 'id = ?', whereArgs: [task.id]);
+    await db
+        .update('tasks', task.toMap(), where: 'id = ?', whereArgs: [task.id]);
+  }
+
+  Future<void> toggleTaskVisibility(int id, bool isView) async {
+    final db = await database;
+    await db.update(
+      'tasks',
+      {'isView': isView ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> restoreTasksFromFirebase(List<Task> firebaseTasks) async {
+    final db = await database;
+
+    for (var task in firebaseTasks) {
+      final List<Map<String, dynamic>> existingTasks = await db.query(
+        'tasks',
+        where: 'id = ?',
+        whereArgs: [task.id],
+      );
+
+      if (existingTasks.isNotEmpty) {
+        await db.update(
+          'tasks',
+          {'isView': 1},
+          where: 'id = ?',
+          whereArgs: [task.id],
+        );
+      } else {
+        await db.insert('tasks', task.toMap());
+      }
+    }
   }
 
   Future<void> deleteTask(int id) async {
     final db = await database;
     await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteGuestTasks() async {
+    final db = await database;
+    await db.delete('tasks', where: 'userId IS NULL');
+  }
+
+  /// Remove todos os dados do banco atual
+  Future<void> clearLocalData() async {
+    final db = await database;
+    await db.delete('tasks');
   }
 }
