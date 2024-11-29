@@ -5,8 +5,9 @@ import '../providers/task_provider.dart';
 
 class AddTaskScreen extends StatefulWidget {
   final Task? task;
+  final String? userId;
 
-  const AddTaskScreen({Key? key, this.task}) : super(key: key);
+  const AddTaskScreen({Key? key, this.task, this.userId}) : super(key: key);
 
   @override
   _AddTaskScreenState createState() => _AddTaskScreenState();
@@ -56,7 +57,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               DropdownButtonFormField<String>(
                 value: _priority,
-                items: ['Alta', 'Média', 'Baixa']
+                items: ['Alta', 'Media', 'Baixa']
                     .map((priority) => DropdownMenuItem(
                           value: priority,
                           child: Text(priority),
@@ -86,6 +87,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       description: _description,
                       priority: _priority,
                       isCompleted: widget.task?.isCompleted ?? false,
+                      isView: true,
                     );
 
                     if (widget.task == null) {
