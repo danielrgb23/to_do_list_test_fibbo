@@ -2,32 +2,28 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:to_do_list/providers/task_provider.dart';
 
 class AuthService {
-  //for authentication
   static FirebaseAuth auth = FirebaseAuth.instance;
-
-  //for acessing cloud firestore database
   static FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  static User get user => auth.currentUser!;
+  static User? get user => auth.currentUser;
 
+  /// Login do usuário
   Future<String?> userLogin(
       {required String email,
       required String senha,
       required Function onFail,
-      required Function onSuccess}) async {
+      required Function onSuccess,
+      required BuildContext context}) async {
     try {
-      UserCredential userCredential =
-          await auth.signInWithEmailAndPassword(email: email, password: senha);
-
-      // Verificar se o e-mail foi verificado
-      if (userCredential.user!.emailVerified) {
-        onSuccess();
-      } else {
-        return "Por favor, verifique seu e-mail antes de fazer login.";
-      }
+      await auth.signInWithEmailAndPassword(email: email, password: senha);
+      await Provider.of<TaskProvider>(context, listen: false)
+          .handleLogin(user!.uid);
+      onSuccess();
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
         case "user-not-found":
@@ -36,24 +32,12 @@ class AuthService {
           return "Email ou senha incorretos";
       }
       onFail();
-
       return e.code;
     }
     return null;
   }
 
-  //for cheking if user exists or not?
-  static Future<bool> userExists() async {
-    return (await firestore.collection('users').doc(user.uid).get()).exists;
-  }
-
-  //for create a new user
-  static Future<void> createUser(String email, String name) async {
-    final dataUser = {'name': user.displayName, 'email': user.email};
-
-    return await firestore.collection('users').doc(user.uid).set(dataUser);
-  }
-
+  /// Cadastro de usuário
   Future<String?> cadastrarUsuario({
     required String email,
     required String name,
@@ -67,15 +51,12 @@ class AuthService {
         password: password,
       );
 
-      await userCredential.user!.updateDisplayName(user.displayName);
+      await userCredential.user!.updateDisplayName(name);
 
-      // Enviar e-mail de verificação
-      await userCredential.user!.sendEmailVerification();
-
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'id': user.uid,
-        'nome': user.displayName,
-        'email': user.email,
+      await firestore.collection('users').doc(user!.uid).set({
+        'id': user!.uid,
+        'nome': user!.displayName,
+        'email': user!.email,
       });
 
       onSuccess();
@@ -85,7 +66,7 @@ class AuthService {
         case "email-already-in-use":
           return "O e-mail já está em uso.";
       }
-      onFail() {}
+      onFail();
       return e.code;
     } catch (e) {
       log("Erro ao salvar no Firestore: $e");
@@ -95,6 +76,7 @@ class AuthService {
     return null;
   }
 
+  /// Remove a conta do usuário
   Future<String?> removerConta({required String senha}) async {
     try {
       await auth.signInWithEmailAndPassword(
@@ -106,10 +88,12 @@ class AuthService {
     return null;
   }
 
-  Future<String?> resetPassword(
-      {required String email,
-      required Function onFail,
-      required Function onSuccess}) async {
+  /// Reseta a senha do usuário
+  Future<String?> resetPassword({
+    required String email,
+    required Function onFail,
+    required Function onSuccess,
+  }) async {
     try {
       await auth.sendPasswordResetEmail(email: email);
       onSuccess();
@@ -121,5 +105,11 @@ class AuthService {
       return e.code;
     }
     return null;
+  }
+
+  /// Faz logout do usuário
+  Future<void> logout() async {
+    await auth.signOut();
+    await GoogleSignIn().signOut();
   }
 }
