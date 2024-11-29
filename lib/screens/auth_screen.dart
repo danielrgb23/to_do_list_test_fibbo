@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:to_do_list/services/auth_service.dart';
 import 'package:to_do_list/widgets/show_snack_bar.dart';
+import 'package:to_do_list/providers/task_provider.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -19,11 +21,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
   final _formKey = GlobalKey<FormState>();
 
-  AuthService authService = AuthService();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(),
       body: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: 32,
@@ -183,23 +184,27 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   _entrarUsuario({required String email, required String senha}) {
-    authService
-        .userLogin(
-            email: email,
-            senha: senha,
-            onFail: (erro) {
-              if (erro != null) {
-                showSnackBar(context: context, mensagem: erro);
-              }
-            },
-            onSuccess: () {
-              Navigator.pushReplacementNamed(context, '/');
-            });
+    context.read<AuthService>().userLogin(
+        context: context,
+        email: email,
+        senha: senha,
+        onFail: (erro) {
+          if (erro != null) {
+            showSnackBar(context: context, mensagem: erro);
+          }
+        },
+        onSuccess: () {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/',
+            (Route<dynamic> route) => false,
+          );
+        });
   }
 
   _criarUsuario(
       {required String email, required String senha, required String nome}) {
-    authService.cadastrarUsuario(
+    context.read<AuthService>().cadastrarUsuario(
         email: email,
         password: senha,
         name: nome,
@@ -208,7 +213,11 @@ class _AuthScreenState extends State<AuthScreen> {
             showSnackBar(context: context, mensagem: erro);
           }
         },
-        onSuccess: () {});
+        onSuccess: () {
+          setState(() {
+            isEntrando = !isEntrando;
+          });
+        });
   }
 
   esqueciMinhaSenhaClicado() {
@@ -232,7 +241,7 @@ class _AuthScreenState extends State<AuthScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                authService.resetPassword(
+                context.read<AuthService>().resetPassword(
                     email: redefinicaoSenhaController.text,
                     onFail: (erro) {
                       showSnackBar(context: context, mensagem: erro);
