@@ -1,42 +1,19 @@
-import 'home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:to_do_list/screens/auth_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:to_do_list/providers/task_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final User user;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  ProfileScreen({required this.user});
+  const ProfileScreen({super.key, required this.user});
 
-  Future<void> _backupTasks(BuildContext context) async {
-    final tasks =
-        []; // Pegue as tasks do seu Provider ou do local onde elas estão.
-    try {
-      await _firestore.collection('users').doc(user.uid).set({
-        'tasks': tasks,
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Backup realizado com sucesso")));
-    } catch (e) {
-      print("Erro ao fazer backup: $e");
-    }
-  }
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
 
-  Future<void> _retrieveTasks(BuildContext context) async {
-    try {
-      final snapshot = await _firestore.collection('users').doc(user.uid).get();
-      final tasks = snapshot.data()?['tasks'];
-      // Atualize as tasks no seu provider ou onde necessário.
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Tarefas recuperadas")));
-    } catch (e) {
-      print("Erro ao recuperar as tarefas: $e");
-    }
-  }
+class _ProfileScreenState extends State<ProfileScreen> {
+  final TaskProvider taskProvider = TaskProvider();
 
   @override
   Widget build(BuildContext context) {
@@ -47,24 +24,36 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('Nome: ${user.displayName ?? 'Não disponível'}'),
-            Text('Email: ${user.email ?? 'Não disponível'}'),
-            SizedBox(height: 20),
+            Text('Nome: ${widget.user.displayName ?? 'Não disponível'}'),
+            Text('Email: ${widget.user.email ?? 'Não disponível'}'),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.pushReplacementNamed(context, '/');
+                Provider.of<TaskProvider>(context, listen: false)
+                    .handleLogout()
+                    .then((onValue) {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/',
+                    (Route<dynamic> route) => false,
+                  );
+                });
               },
-              child: Text('Sair'),
+              child: const Text('Sair'),
             ),
             ElevatedButton(
-              onPressed: () => _backupTasks(context),
-              child: Text('Fazer Backup'),
+              onPressed: () {
+                Provider.of<TaskProvider>(context, listen: false)
+                    .backupVisibleTasksToFirebase(widget.user.uid);
+                Navigator.pop(context);
+              },
+              child: const Text('Fazer Backup'),
             ),
             ElevatedButton(
               onPressed: () async {
                 await Provider.of<TaskProvider>(context, listen: false)
-                    .restoreTasks(user.uid);
+                    .restoreTasksFromFirebase(widget.user.uid);
+                Navigator.pop(context);
               },
               child: Text('Recuperar Tarefas'),
             ),
