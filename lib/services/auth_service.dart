@@ -12,7 +12,6 @@ class AuthService {
 
   static User? get user => auth.currentUser;
 
-  /// Login do usuário
   Future<String?> userLogin(
       {required String email,
       required String senha,
@@ -37,7 +36,6 @@ class AuthService {
     return null;
   }
 
-  /// Cadastro de usuário
   Future<String?> cadastrarUsuario({
     required String email,
     required String name,
@@ -66,7 +64,7 @@ class AuthService {
         case "email-already-in-use":
           return "O e-mail já está em uso.";
       }
-      onFail();
+      onFail(e.code);
       return e.code;
     } catch (e) {
       log("Erro ao salvar no Firestore: $e");
@@ -76,7 +74,6 @@ class AuthService {
     return null;
   }
 
-  /// Remove a conta do usuário
   Future<String?> removerConta({required String senha}) async {
     try {
       await auth.signInWithEmailAndPassword(
@@ -88,7 +85,6 @@ class AuthService {
     return null;
   }
 
-  /// Reseta a senha do usuário
   Future<String?> resetPassword({
     required String email,
     required Function onFail,
@@ -107,7 +103,6 @@ class AuthService {
     return null;
   }
 
-  /// Faz logout do usuário
   Future<void> logout() async {
     await auth.signOut();
     await GoogleSignIn().signOut();

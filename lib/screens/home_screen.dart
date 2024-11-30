@@ -93,12 +93,6 @@ class _HomeScreenState extends State<HomeScreen>
       floatingActionButton: ExpandableFab(
         distance: 112,
         children: [
-          // ActionButton(
-          //   onPressed: () async {
-          //     await Provider.of<TaskProvider>(context, listen: false).handleLogout();
-          //   },
-          //   icon: const Icon(Icons.tap_and_play),
-          // ),
           ActionButton(
             onPressed: () {
               setState(() {

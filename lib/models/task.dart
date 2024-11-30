@@ -5,7 +5,7 @@ class Task {
   final String priority;
   final bool isCompleted;
   final bool isView;
-  final String? userId; // Novo campo
+  final String? userId;
 
   Task({
     this.id,

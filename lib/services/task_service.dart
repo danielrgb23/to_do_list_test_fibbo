@@ -5,16 +5,15 @@ import 'package:sqflite/sqflite.dart';
 class TaskService {
   static final TaskService _instance = TaskService._internal();
   Database? _database;
-  String _currentUserId = 'guest'; // Padrão é "guest"
+  String _currentUserId = 'guest';
 
   TaskService._internal();
 
   factory TaskService() => _instance;
 
-  /// Define o ID do usuário atual (para alternar entre bancos de dados)
   void setUserId(String userId) {
     _currentUserId = userId;
-    _database = null; // Força a reinicialização do banco de dados
+    _database = null;
   }
 
   Future<Database> get database async {
@@ -23,11 +22,10 @@ class TaskService {
     return _database!;
   }
 
-  /// Inicializa o banco de dados com base no usuário atual
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(
-        dbPath, '$_currentUserId-tasks.db'); // Banco específico por usuário
+        dbPath, '$_currentUserId-tasks.db');
 
     return openDatabase(
       path,
@@ -114,7 +112,6 @@ class TaskService {
     await db.delete('tasks', where: 'userId IS NULL');
   }
 
-  /// Remove todos os dados do banco atual
   Future<void> clearLocalData() async {
     final db = await database;
     await db.delete('tasks');
