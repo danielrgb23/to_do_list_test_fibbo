@@ -27,7 +27,12 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     auth != null
-        ? {context.read<TaskProvider>().backupVisibleTasksToFirebase(auth!.uid), context.read<TaskProvider>().setGuestMode(false)}
+        ? {
+            context
+                .read<TaskProvider>()
+                .backupVisibleTasksToFirebase(auth!.uid),
+            context.read<TaskProvider>().setGuestMode(false)
+          }
         : log('Não esta logado');
   }
 
@@ -144,8 +149,6 @@ class _HomeScreenState extends State<HomeScreen>
             ? tasks
             : tasks.where((task) => task.priority == selectedPriority).toList();
 
-            
-
         if (filteredTasks.isEmpty) {
           return Center(
             child: Text(
@@ -200,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen>
                                 description: task.description,
                                 priority: task.priority,
                                 isCompleted: value!,
-                                isView: true),
+                                isView: true,
+                                userId: auth != null ? auth!.uid : null),
                           );
                     },
                   ),
