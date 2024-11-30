@@ -101,40 +101,17 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> handleLogin(String userId) async {
-    // Associar tarefas guest ao usuário logado
-    final guestTasks =
-        await fetchGuestTasks(); // Pega todas as tarefas do guest
-    for (final task in guestTasks) {
-      final updatedTask = task.copyWith(
-          userId: userId); // Atualiza as tarefas com o userId do usuário logado
-
-      // Atualiza ou adiciona tarefas no banco local
-      // Se a tarefa já existir no banco, ela será atualizada, caso contrário, será inserida
-      await _taskService
-          .updateTask(updatedTask); // Atualiza tarefa no banco de dados local
-      if (!_tasks.contains(updatedTask)) {
-        setGuestMode(false);
-        _tasks.add(
-            updatedTask); // Adiciona a tarefa à lista local de tarefas se ainda não estiver
-      }
-      setGuestMode(true);
-    }
+    setGuestMode(false);
 
     // Carrega as tarefas após mover do guest para o usuário logado
     await loadTasks();
 
-    // Limpar tarefas guest (todas as tarefas associadas ao "guest" são removidas)
-    await clearGuestTasks();
-
-    // Mudar para o modo logado (não é mais guest)
-    setGuestMode(false);
-
     // Restaurar tarefas do Firebase
-    await restoreTasksFromFirebase(userId);
+    restoreTasksFromFirebase(userId);
   }
 
   Future<void> handleLogout() async {
-    if (!_isGuest) {
+    if (_isGuest == false) {
       // Faz backup das tarefas para o Firebase antes do logout
       await backupVisibleTasksToFirebase(AuthService.user!.uid);
     }
@@ -148,18 +125,7 @@ class TaskProvider with ChangeNotifier {
     // Define o modo guest e limpa o estado
     setGuestMode(true);
     _tasks.clear(); // Garante que a lista local também seja limpa
-    notifyListeners();
-  }
-
-  /// Busca as tarefas do modo guest
-  Future<List<Task>> fetchGuestTasks() async {
-    return _tasks.where((task) => task.userId == null).toList();
-  }
-
-  /// Limpa as tarefas do modo guest
-  Future<void> clearGuestTasks() async {
-    _tasks.removeWhere((task) => task.userId == null);
-    await _taskService.deleteGuestTasks();
+    loadTasks();
     notifyListeners();
   }
 
