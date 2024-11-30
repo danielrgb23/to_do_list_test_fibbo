@@ -5,8 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:to_do_list/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:to_do_list/screens/auth_screen.dart';
 import 'package:to_do_list/services/auth_service.dart';
 
+
+//TODO: Ajute no design/layout e adicionar animações
+//TODO: Adicionar testes
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,13 +24,14 @@ void main() async {
         Provider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => TaskProvider()..loadTasks()),
       ],
-      child: const MyApp(),
+      child: MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
+  final auth = AuthService.auth.currentUser;
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +42,8 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       darkTheme: ThemeData.dark(),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => HomeScreen(),
-        '/add': (context) => AddTaskScreen(),
-      },
+      home: auth != null ? HomeScreen() : const AuthScreen(),
+      
     );
   }
 }
